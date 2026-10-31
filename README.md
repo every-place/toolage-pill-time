@@ -27,6 +27,31 @@ For each med:
 
 The rules live in `lib/core/scheduler.dart`, and `test/core_test.dart` covers them.
 
+## Sending builds to TestFlight (no Mac needed)
+
+GitHub builds the iPhone app, signs it, and uploads it to TestFlight. After the one-time setup below, getting a new version onto your phone is just: **Actions → TestFlight → Run workflow**, wait about 15 minutes, then update in the TestFlight app.
+
+### One-time setup
+
+1. **Developer membership.** Sign in at [developer.apple.com/account](https://developer.apple.com/account) and check that the membership is active. On the same page, under **Membership details**, copy the **Team ID** (10 characters).
+2. **Register the app's ID.** In **Certificates, IDs & Profiles → Identifiers**, tap **+**, choose **App IDs → App**, enter the description `Pill Time` and the explicit Bundle ID `com.everyplace.pilltime`, then tap **Continue** and **Register**.
+3. **Create the app in App Store Connect.** At [appstoreconnect.apple.com](https://appstoreconnect.apple.com), go to **Apps**, tap **+**, then **New App**. Choose platform iOS and bundle ID `com.everyplace.pilltime`. The name must be unique on the App Store, so if "Pill Time" is taken, try "Pill Time by EveryPlace". Any SKU works, such as `pilltime`. Nothing becomes public; this is only the app's record.
+4. **Make an API key.** In App Store Connect, open **Users and Access → Integrations → App Store Connect API**, then tap **Generate API Key**. Name it `GitHub`, give it **Admin** access (needed so GitHub can create signing certificates), and download the `.p8` file. You can only download it once. Note the **Key ID** next to it and the **Issuer ID** at the top of the page.
+5. **Add four GitHub secrets.** In this repo on GitHub, open **Settings → Secrets and variables → Actions**. Add each of these with **New repository secret**:
+
+   | Name | Value |
+   |---|---|
+   | `APPLE_TEAM_ID` | The Team ID from step 1 |
+   | `ASC_KEY_ID` | The Key ID from step 4 |
+   | `ASC_ISSUER_ID` | The Issuer ID from step 4 |
+   | `ASC_KEY_P8` | The whole contents of the `.p8` file. Open it in a text editor and copy everything, including the BEGIN and END lines |
+
+   Secrets can't be read back by anyone, including from the workflow logs.
+6. **Run it.** On GitHub, open **Actions → TestFlight → Run workflow**.
+7. **Install it.** When the build appears in App Store Connect under **TestFlight** (it can take 5 to 30 minutes to finish processing), create an **Internal Testing** group, add yourself, and accept the email invite on your iPhone. You install the build through the free **TestFlight** app. Add Kristen to the same group the same way.
+
+The first time, TestFlight may ask about encryption. The app already declares that it uses none.
+
 ## Trying it on an Android phone
 
 1. Open the repo's **Actions** tab on GitHub and click the latest green **Build** run.
@@ -34,27 +59,14 @@ The rules live in `lib/core/scheduler.dart`, and `test/core_test.dart` covers th
 3. Send the APK to the phone (email, Google Drive, or a USB cable) and open it there. Android will ask you to allow installing apps from that source. Allow it once.
 4. Open Pill Time. Allow notifications, then on the "Alarms & reminders" screen turn the switch on, and allow full-screen alerts if asked.
 
-## Running it on an iPhone (on Sarah's Mac)
+## Running it from a Mac instead
 
-One-time setup:
+If a Mac is handy (for example Sarah's):
 
-1. Install **Xcode** from the Mac App Store. Open it once and let it install its components.
-2. Install Flutter: follow https://docs.flutter.dev/get-started/install/macos (the "iOS" path). Run `flutter doctor` until the iOS items are green.
-3. In Xcode, open **Settings → Accounts** and sign in with the Apple ID that has the EveryPlace developer membership.
-4. Clone this repo, then in Terminal run `flutter pub get` inside it.
-
-Run it on a phone:
-
-1. Plug in the iPhone, unlock it, and tap **Trust**. On the phone, turn on **Settings → Privacy & Security → Developer Mode** (it restarts).
-2. Open `ios/Runner.xcworkspace` in Xcode. Click **Runner**, open **Signing & Capabilities**, and choose the EveryPlace team. If Xcode says the bundle ID `com.everyplace.pilltime` is taken, change it to something unique.
-3. In Terminal, run `flutter run --release` and pick the phone.
-
-Send it to Kristen with TestFlight:
-
-1. Bump the version in `pubspec.yaml` (for example `1.0.0+2`). The number after `+` must go up with every upload.
-2. Run `flutter build ipa`.
-3. Open the `.xcarchive` it made (in `build/ios/archive/`) in Xcode's **Organizer**, then click **Distribute App → App Store Connect → Upload**.
-4. In [App Store Connect](https://appstoreconnect.apple.com), open the app, go to **TestFlight**, and add Kristen as a tester. She installs the free TestFlight app and taps the invite.
+1. Install **Xcode** from the Mac App Store and **Flutter** (https://docs.flutter.dev/get-started/install/macos). Run `flutter doctor` until the iOS items are green.
+2. In Xcode, open **Settings → Accounts** and sign in with the developer Apple ID.
+3. Clone this repo and run `flutter pub get`.
+4. Plug in the iPhone and turn on **Settings → Privacy & Security → Developer Mode** on it. Open `ios/Runner.xcworkspace`, choose the team under **Runner → Signing & Capabilities**, then run `flutter run --release`.
 
 ## Project layout
 
