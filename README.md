@@ -59,14 +59,46 @@ The first time, TestFlight may ask about encryption. The app already declares th
 3. Send the APK to the phone (email, Google Drive, or a USB cable) and open it there. Android will ask you to allow installing apps from that source. Allow it once.
 4. Open Pill Time. Allow notifications, then on the "Alarms & reminders" screen turn the switch on, and allow full-screen alerts if asked.
 
-## Running it from a Mac instead
+## Installing free from a Mac (no developer membership)
 
-If a Mac is handy (for example Sarah's):
+A free Apple ID can install Pill Time on your own iPhone. The catch is that the install **expires after 7 days**. When it does, the app won't open until you plug the phone back in and run it again. Your meds and history are kept, because reinstalling over the top doesn't erase them. Just don't delete the app.
 
-1. Install **Xcode** from the Mac App Store and **Flutter** (https://docs.flutter.dev/get-started/install/macos). Run `flutter doctor` until the iOS items are green.
-2. In Xcode, open **Settings → Accounts** and sign in with the developer Apple ID.
-3. Clone this repo and run `flutter pub get`.
-4. Plug in the iPhone and turn on **Settings → Privacy & Security → Developer Mode** on it. Open `ios/Runner.xcworkspace`, choose the team under **Runner → Signing & Capabilities**, then run `flutter run --release`.
+What you need: a Mac with macOS 15.6 or later (for example Sarah's), the iPhone, and a USB cable. Allow about an hour the first time, mostly downloads.
+
+### One-time setup on the Mac
+
+1. **Install Xcode** from the Mac App Store (it's large). Open it once, accept the license, and when it asks which platforms to install, include **iOS**.
+2. **Install Flutter.** The easiest way is Homebrew. If Homebrew isn't installed, paste the command from [brew.sh](https://brew.sh) into Terminal first. Then run:
+   ```
+   brew install --cask flutter
+   brew install cocoapods
+   flutter doctor
+   ```
+   `flutter doctor` lists anything still missing for iOS. Fix those items, but ignore the Android ones.
+3. **Sign Xcode in to your Apple ID.** In Xcode, open **Settings → Accounts → +** and add your normal Apple ID. It shows up as "(Personal Team)".
+4. **Get the code.** On GitHub, open this repo, click **Code → Download ZIP**, and unzip it, for example to your Desktop. Then in Terminal:
+   ```
+   cd ~/Desktop/toolage-pill-time-main
+   flutter pub get
+   ```
+5. **Choose your team.** Open `ios/Runner.xcworkspace` in Xcode. Click **Runner** in the left sidebar, then the **Runner** target, then **Signing & Capabilities**. Tick **Automatically manage signing** and set **Team** to your Personal Team. If Xcode says the bundle identifier isn't available, change it to something unique, such as `com.everyplace.pilltime.aaron`.
+
+### Install (and again every 7 days)
+
+1. Plug the iPhone into the Mac, unlock it, and tap **Trust** if asked.
+2. First time only, on the iPhone: turn on **Settings → Privacy & Security → Developer Mode**. The phone restarts.
+3. On the Mac, in Terminal, inside the project folder:
+   ```
+   flutter run --release
+   ```
+   Pick the iPhone if it asks. When it says the app is installed, you can unplug.
+4. First time only, on the iPhone: if it says "Untrusted Developer", go to **Settings → General → VPN & Device Management**, tap your Apple ID, and tap **Trust**.
+
+To refresh after 7 days, repeat steps 1 and 3. To get a newer version of the app, download the ZIP again first.
+
+### With a developer membership
+
+Sign Xcode in with the developer Apple ID and pick that team in step 5 instead. Installs then last a year, and the TestFlight section above becomes available.
 
 ## Project layout
 
