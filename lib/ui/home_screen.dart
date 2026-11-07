@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/format.dart';
 import '../core/scheduler.dart';
 import '../services/reminders.dart';
-import 'colors.dart';
+import 'brand.dart';
 import 'dose_screen.dart';
 import 'history_screen.dart';
 import 'meds_screen.dart';
@@ -116,10 +116,10 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, msg, _) => msg == null
                   ? const SizedBox.shrink()
                   : MaterialBanner(
-                      backgroundColor: StatusColors.due.withValues(alpha: 0.15),
-                      leading: const Icon(
+                      backgroundColor: context.status.wash,
+                      leading: Icon(
                         Icons.check_circle,
-                        color: StatusColors.due,
+                        color: context.status.due,
                       ),
                       content: Text(msg, style: const TextStyle(fontSize: 18)),
                       actions: [
@@ -132,10 +132,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             if (unconfirmed > 0)
               ListTile(
-                tileColor: StatusColors.warning.withValues(alpha: 0.12),
-                leading: const Icon(
+                tileColor: context.status.warning.withValues(alpha: 0.12),
+                leading: Icon(
                   Icons.warning_amber,
-                  color: StatusColors.warning,
+                  color: context.status.warning,
                 ),
                 title: Text(
                   unconfirmed == 1
@@ -162,8 +162,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: anyDue
-                        ? StatusColors.due
-                        : Colors.grey.shade600,
+                        ? context.status.takeBg
+                        : context.status.idleBg,
+                    foregroundColor: anyDue
+                        ? context.status.takeFg
+                        : context.status.idleFg,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),
@@ -178,7 +181,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         'TAKE MEDS',
                         style: TextStyle(
                           fontSize: 40,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
                         ),
                       ),
                       if (!anyDue && store.meds.isNotEmpty)
@@ -230,9 +234,12 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (String state, Color color) = s.tooEarly
-        ? ('NOT YET. Safe at ${whenText(s.safeAt, now)}', StatusColors.tooEarly)
+        ? (
+            'NOT YET. Safe at ${whenText(s.safeAt, now)}',
+            context.status.tooEarly,
+          )
         : s.due
-        ? ('DUE NOW', StatusColors.due)
+        ? ('DUE NOW', context.status.due)
         : (
             'Next: ${whenText(s.nextDue, now)}',
             Theme.of(context).colorScheme.onSurfaceVariant,

@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../core/format.dart';
 import '../core/scheduler.dart';
-import 'colors.dart';
+import 'brand.dart';
 import 'store_scope.dart';
 
 /// Take a photo, tick the meds, save. Due meds are already ticked.
@@ -69,7 +69,7 @@ class _DoseScreenState extends State<DoseScreen> {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          icon: const Icon(Icons.block, color: StatusColors.tooEarly, size: 48),
+          icon: Icon(Icons.block, color: context.status.tooEarly, size: 48),
           title: Text('Too early for ${s.med.name}'),
           content: Text(
             'Last dose: ${whenText(s.last, _takenAt)}\n'
@@ -85,7 +85,7 @@ class _DoseScreenState extends State<DoseScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: TextButton.styleFrom(
-                foregroundColor: StatusColors.tooEarly,
+                foregroundColor: context.status.tooEarly,
               ),
               child: const Text('I already took it, log it'),
             ),
@@ -135,7 +135,8 @@ class _DoseScreenState extends State<DoseScreen> {
                 height: 84,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: StatusColors.due,
+                    backgroundColor: context.status.takeBg,
+                    foregroundColor: context.status.takeFg,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                     ),
@@ -147,7 +148,7 @@ class _DoseScreenState extends State<DoseScreen> {
                         : 'SAVE (${_checked.length})',
                     style: const TextStyle(
                       fontSize: 30,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
@@ -227,10 +228,10 @@ class _MedRow extends StatelessWidget {
     final (String sub, Color color) = s.tooEarly
         ? (
             'TOO EARLY. Safe at ${whenText(s.safeAt, now)}',
-            StatusColors.tooEarly,
+            context.status.tooEarly,
           )
         : s.due
-        ? ('Due now', StatusColors.due)
+        ? ('Due now', context.status.due)
         : (
             'Not due until ${whenText(s.nextDue, now)}',
             Theme.of(context).colorScheme.onSurfaceVariant,
@@ -241,7 +242,7 @@ class _MedRow extends StatelessWidget {
       leading: Icon(
         checked ? Icons.check_circle : Icons.circle_outlined,
         size: 44,
-        color: checked ? StatusColors.due : null,
+        color: checked ? context.status.due : null,
       ),
       title: Text(
         s.med.name,

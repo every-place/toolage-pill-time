@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'services/reminders.dart';
 import 'services/store.dart';
+import 'ui/brand.dart';
 import 'ui/home_screen.dart';
 import 'ui/store_scope.dart';
 
@@ -36,20 +37,13 @@ class _PillTimeAppState extends State<PillTimeApp> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF1B8A3A));
     return StoreScope(
       store: widget.store,
       child: MaterialApp(
         title: 'Pill Time',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(colorScheme: scheme, useMaterial3: true),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1B8A3A),
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
+        theme: toolageTheme(Brightness.light),
+        darkTheme: toolageTheme(Brightness.dark),
         home: const HomeScreen(),
       ),
     );
