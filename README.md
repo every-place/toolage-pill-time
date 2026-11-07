@@ -59,7 +59,36 @@ The first time, TestFlight may ask about encryption. The app already declares th
 3. Send the APK to the phone (email, Google Drive, or a USB cable) and open it there. Android will ask you to allow installing apps from that source. Allow it once.
 4. Open Pill Time. Allow notifications, then on the "Alarms & reminders" screen turn the switch on, and allow full-screen alerts if asked.
 
-## Installing free from a Mac (no developer membership)
+## Installing free with AltStore (no developer membership)
+
+[AltStore](https://altstore.io) is a free app that installs apps onto your iPhone using your normal Apple ID. You need a computer for the first setup and for the weekly refresh. That can be a Mac with macOS 11 or later (for example Sarah's), or a Windows PC. GitHub builds the app file (`PillTime.ipa`) for you, so no Xcode is needed.
+
+Limits of a free Apple ID: each install lasts **7 days** and must be refreshed, and you can have at most 3 sideloaded apps at once (AltStore itself counts as one). Your meds and history survive refreshes.
+
+### One-time setup
+
+1. **On the computer, install AltServer.** Follow AltStore's guide for [Mac](https://faq.altstore.io/altstore-classic/how-to-install-altstore-macos) or [Windows](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows). On Windows, install iTunes and iCloud from Apple's website first, not from the Microsoft Store.
+2. **Install AltStore on the iPhone.** Plug the iPhone in, unlock it, and tap **Trust**. Turn on Wi-Fi sync for the phone (Finder on a Mac, iTunes on Windows). Click the AltServer icon in the menu bar or system tray, choose **Install AltStore**, pick the iPhone, and sign in with your Apple ID.
+3. **On the iPhone:**
+   - Turn on **Settings → Privacy & Security → Developer Mode**. The phone restarts.
+   - Go to **Settings → General → VPN & Device Management**, tap your Apple ID, and tap **Trust**.
+4. **Get the app file on the iPhone.** In Safari on the iPhone, sign in to GitHub and open this repo's **Actions** tab. Open the latest green **Build** run on `main` and, under **Artifacts**, download **pill-time-iphone-ipa**. In the **Files** app, open Downloads and tap the zip to unzip it. You now have `PillTime.ipa`.
+5. **Install Pill Time.** Open **AltStore**, go to the **My Apps** tab, tap **+** at the top, and choose `PillTime.ipa`. Sign in with your Apple ID if it asks.
+6. **Open Pill Time** and allow notifications and alarms.
+
+### Every 7 days
+
+Keep AltServer running on the computer, with the computer and iPhone on the same Wi-Fi. AltStore refreshes on its own in the background. You can also open AltStore and tap **Refresh All**. AltStore shows how many days each app has left.
+
+### Updating to a newer version
+
+Download the newest **pill-time-iphone-ipa** (step 4) and install it again with **+** in AltStore (step 5). It installs over the old version and keeps your data.
+
+### If the computer isn't usually around
+
+[SideStore](https://docs.sidestore.io) works like AltStore, but after a one-time setup on a computer it refreshes from the phone itself, using a small VPN-style helper app. It's worth switching if keeping a computer on is a hassle.
+
+## Installing free from a Mac with Xcode (no developer membership)
 
 A free Apple ID can install Pill Time on your own iPhone. The catch is that the install **expires after 7 days**. When it does, the app won't open until you plug the phone back in and run it again. Your meds and history are kept, because reinstalling over the top doesn't erase them. Just don't delete the app.
 
