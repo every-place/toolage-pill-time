@@ -96,44 +96,7 @@ class _MedsScreenState extends State<MedsScreen> {
               style: TextStyle(fontSize: 14),
             ),
           ),
-          const _MadeBy(),
-        ],
-      ),
-    );
-  }
-}
-
-/// Small "by Toolage Works" sign-off shared by Toolage apps.
-class _MadeBy extends StatelessWidget {
-  const _MadeBy();
-
-  @override
-  Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: Column(
-        children: [
-          Text.rich(
-            TextSpan(
-              style: TextStyle(fontSize: 18, color: muted),
-              children: const [
-                TextSpan(text: 'Pill Time by '),
-                TextSpan(
-                  text: 'Toolage',
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-                TextSpan(
-                  text: 'Works',
-                  style: TextStyle(fontWeight: FontWeight.w400),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            'toolageworks.com',
-            style: TextStyle(fontSize: 14, color: muted),
-          ),
+          const ToolageSignoff(appName: 'Pill Time'),
         ],
       ),
     );
