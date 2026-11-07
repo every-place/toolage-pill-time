@@ -44,4 +44,15 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build ios --release --no-codesign
+      - run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
+      # An unsigned app file for AltStore/SideStore, which sign it with a
+      # free Apple ID on the phone. See "Installing with AltStore" in the README.
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ipa/Payload/
+          cd build/ipa && zip -qr PillTime.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pill-time-iphone-ipa
+          path: build/ipa/PillTime.ipa
