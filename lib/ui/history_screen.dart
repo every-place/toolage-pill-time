@@ -76,7 +76,7 @@ class HistoryScreen extends StatelessWidget {
                   key: ValueKey(e.id),
                   direction: DismissDirection.endToStart,
                   background: Container(
-                    color: Colors.red,
+                    color: Theme.of(context).colorScheme.error,
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 24),
                     child: const Icon(Icons.delete, color: Colors.white),

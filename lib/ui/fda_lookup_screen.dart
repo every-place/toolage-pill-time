@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/format.dart';
 import '../core/gap_parser.dart';
 import '../services/fda_client.dart';
+import 'brand.dart';
 
 /// Shows matching FDA labels. Picking one shows its dosing text and a
 /// suggested gap. Returns the suggested minutes if the person chooses to use
@@ -158,6 +159,11 @@ class _LabelScreen extends StatelessWidget {
             label.dosingText.isEmpty
                 ? '(This label has no dosing section.)'
                 : label.dosingText,
+            style: const TextStyle(
+              fontFamily: ToolageFonts.body,
+              fontSize: 17,
+              height: 1.45,
+            ),
           ),
         ],
       ),

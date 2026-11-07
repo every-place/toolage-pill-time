@@ -4,7 +4,7 @@ import '../core/models.dart';
 
 import '../core/format.dart';
 import '../services/reminders.dart';
-import 'colors.dart';
+import 'brand.dart';
 import 'med_edit_screen.dart';
 import 'store_scope.dart';
 
@@ -51,7 +51,7 @@ class _MedsScreenState extends State<MedsScreen> {
                 '${m.gapConfirmed ? '' : '  (not confirmed)'}',
                 style: TextStyle(
                   fontSize: 16,
-                  color: m.gapConfirmed ? null : StatusColors.warning,
+                  color: m.gapConfirmed ? null : context.status.warning,
                 ),
               ),
               isThreeLine: true,
@@ -70,8 +70,8 @@ class _MedsScreenState extends State<MedsScreen> {
             leading: Icon(
               r.alarmsAllowed == true ? Icons.alarm_on : Icons.alarm_off,
               color: r.alarmsAllowed == true
-                  ? StatusColors.due
-                  : StatusColors.warning,
+                  ? context.status.due
+                  : context.status.warning,
             ),
             title: Text(
               r.alarmsAllowed == true
@@ -95,6 +95,44 @@ class _MedsScreenState extends State<MedsScreen> {
               'prescription, and check every minimum gap with a pharmacist.',
               style: TextStyle(fontSize: 14),
             ),
+          ),
+          const _MadeBy(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small "by Toolage Works" sign-off shared by Toolage apps.
+class _MadeBy extends StatelessWidget {
+  const _MadeBy();
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Column(
+        children: [
+          Text.rich(
+            TextSpan(
+              style: TextStyle(fontSize: 18, color: muted),
+              children: const [
+                TextSpan(text: 'Pill Time by '),
+                TextSpan(
+                  text: 'Toolage',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                TextSpan(
+                  text: 'Works',
+                  style: TextStyle(fontWeight: FontWeight.w400),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            'toolageworks.com',
+            style: TextStyle(fontSize: 14, color: muted),
           ),
         ],
       ),
