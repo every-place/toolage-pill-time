@@ -91,7 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pill Time'),
+        toolbarHeight: 68,
+        title: const ToolageTitle(appName: 'Pill Time'),
         leading: IconButton(
           tooltip: 'Meds',
           icon: const Icon(Icons.medication_outlined),

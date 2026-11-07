@@ -263,3 +263,108 @@ ThemeData toolageTheme(Brightness brightness) {
     ),
   );
 }
+
+/// "that WORKS for you", with WORKS styled like the website.
+TextSpan _slogan(BuildContext context) => TextSpan(
+  children: [
+    const TextSpan(text: 'that '),
+    TextSpan(
+      text: 'WORKS',
+      style: TextStyle(
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0.5,
+        color: context.status.due,
+      ),
+    ),
+    const TextSpan(text: ' for you'),
+  ],
+);
+
+/// App bar title for Toolage apps: the app name, with
+/// "by Toolage · that WORKS for you" underneath.
+class ToolageTitle extends StatelessWidget {
+  const ToolageTitle({super.key, required this.appName, this.slogan = true});
+  final String appName;
+  final bool slogan;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(appName),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text.rich(
+            TextSpan(
+              style: TextStyle(
+                fontFamily: ToolageFonts.display,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0,
+                color: muted,
+              ),
+              children: [
+                const TextSpan(text: 'by '),
+                const TextSpan(
+                  text: 'Toolage',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                if (slogan) ...[
+                  const TextSpan(text: '  ·  '),
+                  _slogan(context),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Sign-off for the bottom of a settings or about screen:
+/// "Pill Time by Toolage", "that WORKS for you", "toolageworks.com".
+class ToolageSignoff extends StatelessWidget {
+  const ToolageSignoff({super.key, required this.appName});
+  final String appName;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: DefaultTextStyle.merge(
+        style: TextStyle(color: muted),
+        textAlign: TextAlign.center,
+        child: Column(
+          children: [
+            Text.rich(
+              TextSpan(
+                style: const TextStyle(fontSize: 18),
+                children: [
+                  TextSpan(text: '$appName by '),
+                  const TextSpan(
+                    text: 'Toolage',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ],
+              ),
+            ),
+            Text.rich(
+              TextSpan(
+                style: const TextStyle(fontSize: 15),
+                children: [_slogan(context)],
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text('toolageworks.com', style: TextStyle(fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+}
