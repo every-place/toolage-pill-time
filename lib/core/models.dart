@@ -1,6 +1,8 @@
 /// Data types for meds, schedules and logged doses.
 library;
 
+import 'prescription.dart';
+
 /// A time of day, like 08:00 or 20:30.
 class ClockTime implements Comparable<ClockTime> {
   const ClockTime(this.hour, this.minute);
@@ -85,10 +87,14 @@ class Med {
     this.gapConfirmedAt,
     this.active = true,
     this.notes = '',
+    this.rx,
   });
 
   final String id;
   final String name;
+
+  /// The bottle label, when the med was added from a prescription.
+  final Prescription? rx;
   final DoseSchedule schedule;
 
   /// The shortest safe time between two doses. The next dose is never
@@ -109,6 +115,7 @@ class Med {
     DateTime? gapConfirmedAt,
     bool? active,
     String? notes,
+    Prescription? rx,
   }) => Med(
     id: id,
     name: name ?? this.name,
@@ -117,6 +124,7 @@ class Med {
     gapConfirmedAt: gapConfirmedAt ?? this.gapConfirmedAt,
     active: active ?? this.active,
     notes: notes ?? this.notes,
+    rx: rx ?? this.rx,
   );
 
   Map<String, dynamic> toJson() => {
@@ -127,6 +135,7 @@ class Med {
     'gapConfirmedAt': gapConfirmedAt?.toIso8601String(),
     'active': active,
     'notes': notes,
+    if (rx != null) 'rx': rx!.toJson(),
   };
 
   factory Med.fromJson(Map<String, dynamic> j) => Med(
@@ -139,6 +148,9 @@ class Med {
         : DateTime.parse(j['gapConfirmedAt'] as String),
     active: j['active'] as bool? ?? true,
     notes: j['notes'] as String? ?? '',
+    rx: j['rx'] == null
+        ? null
+        : Prescription.fromJson(j['rx'] as Map<String, dynamic>),
   );
 }
 
