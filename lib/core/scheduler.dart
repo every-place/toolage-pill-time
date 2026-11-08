@@ -109,12 +109,15 @@ DateTime? plannedNext(Med med, DateTime? last, DateTime now) {
 MedStatus statusFor(Med med, List<DoseEntry> log, DateTime now) {
   final last = lastTaken(med, log);
   final safeAt = last?.add(Duration(minutes: med.minGapMinutes));
-  final planned = plannedNext(med, last, now);
+  // As-needed meds have no planned time: only the safe time matters.
+  final planned = med.asNeeded ? null : plannedNext(med, last, now);
 
   // The key rule: a late dose pushes the next one back so it is never sooner
   // than the minimum gap.
   DateTime? nextDue;
-  if (planned != null && safeAt != null) {
+  if (med.asNeeded) {
+    nextDue = null;
+  } else if (planned != null && safeAt != null) {
     nextDue = planned.isAfter(safeAt) ? planned : safeAt;
   } else {
     nextDue = planned ?? safeAt;

@@ -13,4 +13,8 @@ class StoreScope extends InheritedNotifier<Store> {
   /// Reads the store without rebuilding when it changes (for callbacks).
   static Store read(BuildContext context) =>
       context.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
+
+  /// Like [read], but null when there is no store (as in widget tests).
+  static Store? maybeRead(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<StoreScope>()?.notifier;
 }

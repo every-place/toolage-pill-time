@@ -29,6 +29,17 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   late final TextEditingController _strength;
   final _drugFocus = FocusNode();
 
+  // Label details, all optional.
+  late final TextEditingController _whyNeeded;
+  late final TextEditingController _rxNumber;
+  late final TextEditingController _pharmacy;
+  late final TextEditingController _pharmacyPhone;
+  late final TextEditingController _prescriber;
+  late final TextEditingController _quantity;
+  late final TextEditingController _refills;
+  late final TextEditingController _price;
+  DateTime? _rxDate;
+
   Timer? _debounce;
   int _searchSeq = 0;
   bool _searching = false;
@@ -50,6 +61,18 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     _drug = TextEditingController(text: rx?.drug ?? '');
     _strength = TextEditingController(text: rx?.strength ?? '');
     _form = rx?.form ?? 'tablet';
+    final d = rx?.details ?? const LabelDetails();
+    _whyNeeded = TextEditingController(text: rx?.directions.asNeededFor ?? '');
+    _rxNumber = TextEditingController(text: d.rxNumber);
+    _pharmacy = TextEditingController(text: d.pharmacy);
+    _pharmacyPhone = TextEditingController(text: d.pharmacyPhone);
+    _prescriber = TextEditingController(text: d.prescriber);
+    _quantity = TextEditingController(text: d.quantity);
+    _refills = TextEditingController(text: d.refills?.toString() ?? '');
+    _price = TextEditingController(
+      text: d.price == null ? '' : d.price!.toStringAsFixed(2),
+    );
+    _rxDate = d.rxDate;
     _dir = rx?.directions ?? Directions.forForm(doseFormFor(_form));
     _active = m?.active ?? true;
     _gapTouched = m != null;
@@ -69,17 +92,63 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     _drug.dispose();
     _strength.dispose();
     _drugFocus.dispose();
+    for (final c in [
+      _whyNeeded,
+      _rxNumber,
+      _pharmacy,
+      _pharmacyPhone,
+      _prescriber,
+      _quantity,
+      _refills,
+      _price,
+    ]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  bool get _isTimes => frequencyFor(_dir.frequency).everyHours == null;
+  bool get _isTimes =>
+      !_dir.asNeeded && frequencyFor(_dir.frequency).everyHours == null;
 
   Prescription get _rx => Prescription(
     drug: _drug.text.trim(),
     strength: _strength.text.trim(),
     form: _form,
-    directions: _dir,
+    directions: _dir.copyWith(asNeededFor: _whyNeeded.text.trim()),
+    details: LabelDetails(
+      rxNumber: _rxNumber.text.trim(),
+      rxDate: _rxDate,
+      pharmacy: _pharmacy.text.trim(),
+      pharmacyPhone: _pharmacyPhone.text.trim(),
+      prescriber: _prescriber.text.trim(),
+      quantity: _quantity.text.trim(),
+      refills: int.tryParse(_refills.text.trim()),
+      price: double.tryParse(_price.text.trim().replaceAll(r'$', '')),
+    ),
   );
+
+  /// Pharmacies already used on other meds, with their phone numbers.
+  Map<String, String> _knownPharmacies() {
+    final out = <String, String>{};
+    for (final m in StoreScope.maybeRead(context)?.meds ?? const <Med>[]) {
+      final d = m.rx?.details;
+      if (d == null || d.pharmacy.isEmpty) continue;
+      if ((out[d.pharmacy] ?? '').isEmpty) out[d.pharmacy] = d.pharmacyPhone;
+    }
+    return out;
+  }
+
+  Future<void> _pickRxDate() async {
+    final now = DateTime.now();
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _rxDate ?? now,
+      firstDate: DateTime(now.year - 5),
+      lastDate: now.add(const Duration(days: 30)),
+      helpText: 'Date on the label',
+    );
+    if (d != null) setState(() => _rxDate = d);
+  }
 
   // ---- drug name ----
 
@@ -133,10 +202,11 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   // ---- directions and schedule ----
 
   void _setDirections(Directions d) {
-    final freqChanged = d.frequency != _dir.frequency;
+    final changed =
+        d.frequency != _dir.frequency || d.asNeeded != _dir.asNeeded;
     setState(() {
       _dir = d;
-      if (freqChanged) {
+      if (changed) {
         final f = frequencyFor(d.frequency);
         _times = f.times == null ? [] : [...f.times!];
         if (!_gapTouched) _gapMinutes = d.suggestedGapMinutes();
@@ -391,6 +461,26 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
               ),
             ],
           ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('As needed', style: TextStyle(fontSize: 18)),
+            subtitle: const Text(
+              'Only when you need it, like for pain. No alarms, but the '
+              'minimum gap still applies.',
+            ),
+            value: _dir.asNeeded,
+            onChanged: (v) => _setDirections(_dir.copyWith(asNeeded: v)),
+          ),
+          if (_dir.asNeeded)
+            TextField(
+              controller: _whyNeeded,
+              decoration: const InputDecoration(
+                labelText: 'For (optional)',
+                hintText: 'pain',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
           const SizedBox(height: 12),
           _LabelPreview(rx: _rx),
           const SizedBox(height: 24),
@@ -415,8 +505,11 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                '${scheduleText(_dir.defaultSchedule())}, counted from the '
-                'last dose you log.',
+                _dir.asNeeded
+                    ? 'None. Log a dose whenever you take one, and Pill Time '
+                          'shows when the next one is safe.'
+                    : '${scheduleText(_dir.defaultSchedule())}, counted from '
+                          'the last dose you log.',
                 style: const TextStyle(fontSize: 18),
               ),
             ),
@@ -447,6 +540,22 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                 '${whenText(widget.med!.gapConfirmedAt, DateTime.now())}',
               ),
             ),
+          const SizedBox(height: 24),
+
+          // 6. The rest of the label
+          _LabelDetailsSection(
+            rxNumber: _rxNumber,
+            pharmacy: _pharmacy,
+            pharmacyPhone: _pharmacyPhone,
+            prescriber: _prescriber,
+            quantity: _quantity,
+            refills: _refills,
+            price: _price,
+            rxDate: _rxDate,
+            onPickDate: _pickRxDate,
+            knownPharmacies: _knownPharmacies(),
+            initiallyExpanded: !(widget.med?.rx?.details.isEmpty ?? true),
+          ),
           if (widget.med != null)
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -466,6 +575,158 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Rx number, date, pharmacy, prescriber, quantity, refills and price.
+class _LabelDetailsSection extends StatelessWidget {
+  const _LabelDetailsSection({
+    required this.rxNumber,
+    required this.pharmacy,
+    required this.pharmacyPhone,
+    required this.prescriber,
+    required this.quantity,
+    required this.refills,
+    required this.price,
+    required this.rxDate,
+    required this.onPickDate,
+    required this.knownPharmacies,
+    required this.initiallyExpanded,
+  });
+
+  final TextEditingController rxNumber,
+      pharmacy,
+      pharmacyPhone,
+      prescriber,
+      quantity,
+      refills,
+      price;
+  final DateTime? rxDate;
+  final VoidCallback onPickDate;
+  final Map<String, String> knownPharmacies;
+  final bool initiallyExpanded;
+
+  Widget _field(
+    TextEditingController c,
+    String label, {
+    String? hint,
+    TextInputType? keyboard,
+    String? prefix,
+  }) => TextField(
+    controller: c,
+    keyboardType: keyboard,
+    textCapitalization: keyboard == null
+        ? TextCapitalization.words
+        : TextCapitalization.none,
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixText: prefix,
+      border: const OutlineInputBorder(),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    const gap = SizedBox(height: 12, width: 12);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ExpansionTile(
+        initiallyExpanded: initiallyExpanded,
+        shape: const Border(),
+        title: Text(
+          'Pharmacy and label details',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        subtitle: const Text('Optional: Rx number, date, refills, price'),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        children: [
+          Row(
+            children: [
+              Expanded(child: _field(rxNumber, 'Rx number', hint: '1234567')),
+              gap,
+              Expanded(
+                child: InkWell(
+                  onTap: onPickDate,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Rx date',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today_outlined),
+                    ),
+                    child: Text(rxDate == null ? 'Pick' : dateText(rxDate!)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          gap,
+          _field(pharmacy, 'Pharmacy', hint: 'Walgreens #1234'),
+          if (knownPharmacies.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final MapEntry(key: name, value: phone)
+                    in knownPharmacies.entries)
+                  ActionChip(
+                    avatar: const Icon(Icons.local_pharmacy_outlined),
+                    label: Text(name),
+                    onPressed: () {
+                      pharmacy.text = name;
+                      if (phone.isNotEmpty) pharmacyPhone.text = phone;
+                    },
+                  ),
+              ],
+            ),
+          ],
+          gap,
+          _field(
+            pharmacyPhone,
+            'Pharmacy phone',
+            hint: '(555) 555-1234',
+            keyboard: TextInputType.phone,
+          ),
+          gap,
+          _field(prescriber, 'Prescriber', hint: 'Dr. Smith'),
+          gap,
+          Row(
+            children: [
+              Expanded(
+                child: _field(
+                  quantity,
+                  'Quantity',
+                  hint: '180',
+                  keyboard: TextInputType.number,
+                ),
+              ),
+              gap,
+              Expanded(
+                child: _field(
+                  refills,
+                  'Refills',
+                  hint: '3',
+                  keyboard: TextInputType.number,
+                ),
+              ),
+              gap,
+              Expanded(
+                child: _field(
+                  price,
+                  'Price',
+                  hint: '12.50',
+                  prefix: r'$',
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -232,6 +232,8 @@ class _MedRow extends StatelessWidget {
           )
         : s.due
         ? ('Due now', context.status.due)
+        : s.med.asNeeded
+        ? ('As needed. OK to take now', context.status.due)
         : (
             'Not due until ${whenText(s.nextDue, now)}',
             Theme.of(context).colorScheme.onSurfaceVariant,

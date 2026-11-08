@@ -108,6 +108,9 @@ class Med {
 
   bool get gapConfirmed => gapConfirmedAt != null;
 
+  /// Taken only when needed: no alarms, but the minimum gap still applies.
+  bool get asNeeded => rx?.directions.asNeeded ?? false;
+
   Med copyWith({
     String? name,
     DoseSchedule? schedule,

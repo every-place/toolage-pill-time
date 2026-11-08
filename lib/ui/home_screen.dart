@@ -241,6 +241,8 @@ class _StatusCard extends StatelessWidget {
           )
         : s.due
         ? ('DUE NOW', context.status.due)
+        : s.med.asNeeded
+        ? ('As needed. OK to take now', context.status.due)
         : (
             'Next: ${whenText(s.nextDue, now)}',
             Theme.of(context).colorScheme.onSurfaceVariant,

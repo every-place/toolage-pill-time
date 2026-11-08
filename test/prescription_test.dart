@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pill_time/core/models.dart';
 import 'package:pill_time/core/prescription.dart';
+import 'package:pill_time/core/scheduler.dart';
 import 'package:pill_time/services/drug_search.dart';
 
 void main() {
@@ -137,5 +138,97 @@ void main() {
         contains('1000 mg Tablet'),
       );
     });
+  });
+
+  group('as needed', () {
+    const d = Directions(
+      amount: 2,
+      unit: 'tablet',
+      route: 'mouth',
+      frequency: 'q6h',
+      asNeeded: true,
+      asNeededFor: 'pain',
+    );
+    final med = Med(
+      id: 'p',
+      name: 'Ibuprofen 200 mg',
+      schedule: d.defaultSchedule(),
+      minGapMinutes: d.suggestedGapMinutes(),
+      rx: Prescription(
+        drug: 'Ibuprofen',
+        strength: '200 mg',
+        form: 'tablet',
+        directions: d,
+      ),
+    );
+
+    test('reads like the label', () {
+      expect(
+        med.rx!.directionsText,
+        'Take 2 tablets by mouth every 6 hours as needed for pain.',
+      );
+      expect(med.minGapMinutes, 360);
+    });
+
+    test('3 times a day as needed is at least 8 hours apart', () {
+      final t = d.copyWith(frequency: 'daily3');
+      expect((t.defaultSchedule() as IntervalSchedule).hours, 8);
+      expect(t.suggestedGapMinutes(), 480);
+    });
+
+    test('never due and no alarms, but still too early inside the gap', () {
+      final now = DateTime(2026, 1, 1, 12);
+      final log = [
+        DoseEntry(
+          id: '1',
+          takenAt: DateTime(2026, 1, 1, 9),
+          medIds: ['p'],
+          medNames: [med.name],
+        ),
+      ];
+      final s = statusFor(med, log, now);
+      expect(s.due, isFalse);
+      expect(s.nextDue, isNull);
+      expect(s.tooEarly, isTrue);
+      expect(s.safeAt, DateTime(2026, 1, 1, 15));
+      expect(upcomingAlerts([s], now), isEmpty);
+      expect(statusFor(med, [], now).due, isFalse);
+      expect(statusFor(med, [], now).tooEarly, isFalse);
+    });
+  });
+
+  test('label details save and load', () {
+    final rx = Prescription(
+      drug: 'Metformin',
+      strength: '1000 mg',
+      form: 'tablet',
+      directions: Directions.forForm(doseFormFor('tablet')),
+      details: LabelDetails(
+        rxNumber: '7654321',
+        rxDate: DateTime(2026, 11, 1),
+        pharmacy: 'Walgreens #1234',
+        pharmacyPhone: '555-1234',
+        prescriber: 'Dr. Smith',
+        quantity: '180',
+        refills: 3,
+        price: 4.5,
+      ),
+    );
+    final back = Prescription.fromJson(rx.toJson()).details;
+    expect(back.rxNumber, '7654321');
+    expect(back.rxDate, DateTime(2026, 11, 1));
+    expect(back.pharmacy, 'Walgreens #1234');
+    expect(back.refills, 3);
+    expect(priceText(back.price), r'$4.50');
+    expect(rx.toJson().containsKey('details'), isTrue);
+    expect(
+      Prescription(
+        drug: 'X',
+        strength: '',
+        form: 'tablet',
+        directions: rx.directions,
+      ).toJson().containsKey('details'),
+      isFalse,
+    );
   });
 }

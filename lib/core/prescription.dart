@@ -213,6 +213,8 @@ class Directions {
     required this.route,
     required this.frequency,
     this.extra = '',
+    this.asNeeded = false,
+    this.asNeededFor = '',
   });
 
   /// Defaults that fit a dosage form: "Take 1 tablet by mouth twice a day".
@@ -229,18 +231,28 @@ class Directions {
   final String frequency;
   final String extra;
 
+  /// "As needed" (PRN): no alarms, but the minimum gap still applies.
+  final bool asNeeded;
+
+  /// What it's for when taken as needed, like "pain". May be empty.
+  final String asNeededFor;
+
   Directions copyWith({
     double? amount,
     String? unit,
     String? route,
     String? frequency,
     String? extra,
+    bool? asNeeded,
+    String? asNeededFor,
   }) => Directions(
     amount: amount ?? this.amount,
     unit: unit ?? this.unit,
     route: route ?? this.route,
     frequency: frequency ?? this.frequency,
     extra: extra ?? this.extra,
+    asNeeded: asNeeded ?? this.asNeeded,
+    asNeededFor: asNeededFor ?? this.asNeededFor,
   );
 
   String unitWord() {
@@ -248,23 +260,29 @@ class Directions {
     return amount <= 1 ? one : many;
   }
 
-  /// "Take 1 tablet by mouth twice a day with food."
+  /// "Take 1 tablet by mouth twice a day with food." or
+  /// "Take 1 tablet by mouth every 6 hours as needed for pain."
   String sentence(DoseForm form) {
+    final why = asNeededFor.trim();
     final parts = [
       form.verb,
       amountText(amount),
       unitWord(),
       doseRoutes[route] ?? route,
       frequencyFor(frequency).label,
+      if (asNeeded) 'as needed',
+      if (asNeeded && why.isNotEmpty) 'for $why',
       if (extra.isNotEmpty) doseExtras[extra] ?? extra,
     ];
     return '${parts.join(' ')}.';
   }
 
   /// The dose schedule these directions give, before any edits.
+  /// As-needed meds get an interval, used only for their spacing.
   DoseSchedule defaultSchedule() {
     final f = frequencyFor(frequency);
     if (f.everyHours != null) return IntervalSchedule(f.everyHours!.toDouble());
+    if (asNeeded) return IntervalSchedule(24 / f.times!.length);
     return TimesSchedule([...f.times!]);
   }
 
@@ -272,12 +290,14 @@ class Directions {
   ///
   /// For "every N hours" it is N hours. For "N times a day" it is three
   /// quarters of the spacing (twice a day: 9 hours), so a dose taken a bit
-  /// late doesn't push the next one far off its time.
+  /// late doesn't push the next one far off its time. As needed, it is the
+  /// whole spacing ("up to 3 times a day" is at least 8 hours apart).
   int suggestedGapMinutes() {
     final f = frequencyFor(frequency);
     if (f.everyHours != null) return f.everyHours! * 60;
     final perDay = f.times!.length;
     final spacing = 24 * 60 ~/ perDay;
+    if (asNeeded) return spacing;
     return (spacing * 3 ~/ 4) ~/ 30 * 30;
   }
 
@@ -287,6 +307,8 @@ class Directions {
     'route': route,
     'frequency': frequency,
     'extra': extra,
+    if (asNeeded) 'asNeeded': true,
+    if (asNeededFor.isNotEmpty) 'asNeededFor': asNeededFor,
   };
 
   factory Directions.fromJson(Map<String, dynamic> j) => Directions(
@@ -295,8 +317,82 @@ class Directions {
     route: j['route'] as String,
     frequency: j['frequency'] as String,
     extra: j['extra'] as String? ?? '',
+    asNeeded: j['asNeeded'] as bool? ?? false,
+    asNeededFor: j['asNeededFor'] as String? ?? '',
   );
 }
+
+/// The rest of the pharmacy label. Every field is optional.
+class LabelDetails {
+  const LabelDetails({
+    this.rxNumber = '',
+    this.rxDate,
+    this.pharmacy = '',
+    this.pharmacyPhone = '',
+    this.prescriber = '',
+    this.quantity = '',
+    this.refills,
+    this.price,
+  });
+
+  final String rxNumber;
+
+  /// The date on the label (when it was filled).
+  final DateTime? rxDate;
+  final String pharmacy;
+  final String pharmacyPhone;
+  final String prescriber;
+
+  /// How many came in the bottle, like "180".
+  final String quantity;
+
+  /// Refills left.
+  final int? refills;
+
+  /// What it cost, in dollars.
+  final double? price;
+
+  bool get isEmpty =>
+      rxNumber.isEmpty &&
+      rxDate == null &&
+      pharmacy.isEmpty &&
+      pharmacyPhone.isEmpty &&
+      prescriber.isEmpty &&
+      quantity.isEmpty &&
+      refills == null &&
+      price == null;
+
+  Map<String, dynamic> toJson() => {
+    if (rxNumber.isNotEmpty) 'rxNumber': rxNumber,
+    if (rxDate != null) 'rxDate': _dateOnly(rxDate!),
+    if (pharmacy.isNotEmpty) 'pharmacy': pharmacy,
+    if (pharmacyPhone.isNotEmpty) 'pharmacyPhone': pharmacyPhone,
+    if (prescriber.isNotEmpty) 'prescriber': prescriber,
+    if (quantity.isNotEmpty) 'quantity': quantity,
+    if (refills != null) 'refills': refills,
+    if (price != null) 'price': price,
+  };
+
+  factory LabelDetails.fromJson(Map<String, dynamic> j) => LabelDetails(
+    rxNumber: j['rxNumber'] as String? ?? '',
+    rxDate: j['rxDate'] == null ? null : DateTime.parse(j['rxDate'] as String),
+    pharmacy: j['pharmacy'] as String? ?? '',
+    pharmacyPhone: j['pharmacyPhone'] as String? ?? '',
+    prescriber: j['prescriber'] as String? ?? '',
+    quantity: j['quantity'] as String? ?? '',
+    refills: j['refills'] as int?,
+    price: (j['price'] as num?)?.toDouble(),
+  );
+}
+
+String _dateOnly(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
+/// Like "$12.50", or empty.
+String priceText(double? price) =>
+    price == null ? '' : '\$${price.toStringAsFixed(2)}';
 
 /// What's on the bottle label.
 class Prescription {
@@ -305,6 +401,7 @@ class Prescription {
     required this.strength,
     required this.form,
     required this.directions,
+    this.details = const LabelDetails(),
   });
 
   /// Like "Metformin".
@@ -316,6 +413,7 @@ class Prescription {
   /// A [DoseForm] key, like "tablet".
   final String form;
   final Directions directions;
+  final LabelDetails details;
 
   DoseForm get doseForm => doseFormFor(form);
 
@@ -333,6 +431,7 @@ class Prescription {
     'strength': strength,
     'form': form,
     'directions': directions.toJson(),
+    if (!details.isEmpty) 'details': details.toJson(),
   };
 
   factory Prescription.fromJson(Map<String, dynamic> j) => Prescription(
@@ -340,6 +439,9 @@ class Prescription {
     strength: j['strength'] as String? ?? '',
     form: j['form'] as String,
     directions: Directions.fromJson(j['directions'] as Map<String, dynamic>),
+    details: j['details'] == null
+        ? const LabelDetails()
+        : LabelDetails.fromJson(j['details'] as Map<String, dynamic>),
   );
 }
 
