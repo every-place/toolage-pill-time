@@ -6,6 +6,7 @@ import '../core/format.dart';
 import '../services/reminders.dart';
 import 'brand.dart';
 import 'med_edit_screen.dart';
+import 'prescription_screen.dart';
 import 'store_scope.dart';
 
 class MedsScreen extends StatefulWidget {
@@ -16,9 +17,15 @@ class MedsScreen extends StatefulWidget {
 }
 
 class _MedsScreenState extends State<MedsScreen> {
-  void _edit([Med? med]) =>
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => MedEditScreen(med: med)));
+  /// New meds start from the bottle label. Meds set up by hand keep the
+  /// hand-made screen.
+  void _edit([Med? med]) => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => med == null || med.rx != null
+          ? PrescriptionScreen(med: med)
+          : MedEditScreen(med: med),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +53,7 @@ class _MedsScreenState extends State<MedsScreen> {
                 ),
               ),
               subtitle: Text(
+                '${m.rx == null ? '' : '${m.rx!.directionsText}\n'}'
                 '${scheduleText(m.schedule)}\n'
                 'Minimum gap: ${gapText(m.minGapMinutes)}'
                 '${m.gapConfirmed ? '' : '  (not confirmed)'}',

@@ -107,29 +107,7 @@ class _MedEditScreenState extends State<MedEditScreen> {
     var confirmedAt = old?.gapConfirmedAt;
     final gapChanged = old == null || old.minGapMinutes != _gapMinutes;
     if (gapChanged || confirmedAt == null) {
-      final ok = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Confirm minimum gap'),
-          content: Text(
-            'Minimum time between doses of $name is ${gapText(_gapMinutes)}.\n\n'
-            'Check this against the prescription label. Pill Time will never '
-            'schedule the next dose sooner than this.',
-            style: const TextStyle(fontSize: 18),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Go back'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text('Yes, ${gapText(_gapMinutes)} is correct'),
-            ),
-          ],
-        ),
-      );
+      final ok = await confirmGap(context, name, _gapMinutes);
       if (ok != true || !mounted) return;
       confirmedAt = DateTime.now();
     }
@@ -142,6 +120,7 @@ class _MedEditScreenState extends State<MedEditScreen> {
       gapConfirmedAt: confirmedAt,
       active: _active,
       notes: _notes.text.trim(),
+      rx: old?.rx,
     );
     await StoreScope.read(context).upsertMed(med);
     if (mounted) Navigator.of(context).pop();
@@ -149,23 +128,7 @@ class _MedEditScreenState extends State<MedEditScreen> {
 
   Future<void> _delete() async {
     final med = widget.med!;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete ${med.name}?'),
-        content: const Text('Past doses stay in the history.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+    final ok = await confirmDeleteMed(context, med);
     if (ok != true || !mounted) return;
     await StoreScope.read(context).deleteMed(med);
     if (mounted) Navigator.of(context).pop();
@@ -221,7 +184,7 @@ class _MedEditScreenState extends State<MedEditScreen> {
           ),
           const SizedBox(height: 8),
           if (!_useTimes)
-            _Stepper(
+            ValueStepper(
               label: 'Every ${hoursText(_hours)} hours',
               onMinus: _hours > 0.5
                   ? () => setState(() => _hours -= 0.5)
@@ -252,7 +215,7 @@ class _MedEditScreenState extends State<MedEditScreen> {
             'a dose was taken late.',
           ),
           const SizedBox(height: 8),
-          _Stepper(
+          ValueStepper(
             label: _gapMinutes == 0 ? 'Not set' : gapText(_gapMinutes),
             onMinus: _gapMinutes >= 15
                 ? () => setState(() => _gapMinutes -= 15)
@@ -293,8 +256,10 @@ class _MedEditScreenState extends State<MedEditScreen> {
   }
 }
 
-class _Stepper extends StatelessWidget {
-  const _Stepper({
+/// A big value with - and + buttons.
+class ValueStepper extends StatelessWidget {
+  const ValueStepper({
+    super.key,
     required this.label,
     required this.onMinus,
     required this.onPlus,
@@ -346,4 +311,54 @@ class _Stepper extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Asks the person to confirm the minimum gap. Pill Time saves a gap only
+/// after this.
+Future<bool> confirmGap(BuildContext context, String name, int minutes) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Confirm minimum gap'),
+      content: Text(
+        'Minimum time between doses of $name is ${gapText(minutes)}.\n\n'
+        'Check this against the prescription label. Pill Time will never '
+        'schedule the next dose sooner than this.',
+        style: const TextStyle(fontSize: 18),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Go back'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text('Yes, ${gapText(minutes)} is correct'),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
+}
+
+Future<bool> confirmDeleteMed(BuildContext context, Med med) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('Delete ${med.name}?'),
+      content: const Text('Past doses stay in the history.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
 }
