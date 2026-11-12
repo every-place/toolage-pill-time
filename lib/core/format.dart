@@ -36,6 +36,9 @@ const _months = [
   'Dec',
 ];
 
+/// "Nov 8, 2026".
+String dateText(DateTime d) => '${_months[d.month - 1]} ${d.day}, ${d.year}';
+
 /// "3:40 AM", "Tomorrow 3:40 AM", "Yesterday 9:00 PM" or "Mon 3:40 AM".
 String whenText(DateTime? t, DateTime now) {
   if (t == null) return '-';

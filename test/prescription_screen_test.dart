@@ -38,5 +38,22 @@ void main() {
     expect(find.text('8:00 AM'), findsOneWidget);
     expect(find.text('8:00 PM'), findsOneWidget);
     expect(find.text('9 hr'), findsOneWidget);
+
+    // As needed: no dose times, the label says so.
+    await tester.tap(find.text('As needed'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Take 1 tablet by mouth twice a day as needed.'),
+      findsOneWidget,
+    );
+    expect(find.text('8:00 AM'), findsNothing);
+    expect(find.text('12 hr'), findsOneWidget);
+
+    // The rest of the label is tucked away until opened.
+    await tester.tap(find.text('Pharmacy and label details'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rx number'), findsOneWidget);
+    expect(find.text('Refills'), findsOneWidget);
+    expect(find.text('Price'), findsOneWidget);
   });
 }
