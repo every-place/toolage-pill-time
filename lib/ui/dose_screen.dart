@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/format.dart';
+import '../core/models.dart';
+import '../core/prescription.dart';
 import '../core/scheduler.dart';
 import 'brand.dart';
 import 'store_scope.dart';
@@ -20,6 +22,9 @@ class _DoseScreenState extends State<DoseScreen> {
   late DateTime _takenAt;
   late List<MedStatus> _statuses;
   final _checked = <String>{};
+
+  /// How many of each med, starting at the usual amount.
+  final _amounts = <String, double>{};
   String? _photoPath;
   bool _saving = false;
 
@@ -29,6 +34,9 @@ class _DoseScreenState extends State<DoseScreen> {
     _takenAt = DateTime.now();
     _statuses = StoreScope.read(context).statuses(_takenAt);
     _checked.addAll(_statuses.where((s) => s.due).map((s) => s.med.id));
+    for (final s in _statuses) {
+      _amounts[s.med.id] = s.med.usualAmount;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _takePhoto());
   }
 
@@ -101,9 +109,14 @@ class _DoseScreenState extends State<DoseScreen> {
     if (_checked.isEmpty || _saving) return;
     setState(() => _saving = true);
     final store = StoreScope.read(context);
-    final entry = await store.logDose(_checked, _takenAt, _photoPath);
+    final entry = await store.logDose(
+      _checked,
+      _takenAt,
+      _photoPath,
+      amounts: _amounts,
+    );
     store.savedMessage.value =
-        'Saved ${clockText(entry.takenAt)}: ${entry.medNames.join(', ')}';
+        'Saved ${clockText(entry.takenAt)}: ${entry.lines.join(', ')}';
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -124,6 +137,8 @@ class _DoseScreenState extends State<DoseScreen> {
                       now: _takenAt,
                       checked: _checked.contains(s.med.id),
                       onTap: () => _toggle(s),
+                      amount: _amounts[s.med.id]!,
+                      onAmount: (a) => setState(() => _amounts[s.med.id] = a),
                     ),
                 ],
               ),
@@ -216,11 +231,15 @@ class _MedRow extends StatelessWidget {
     required this.now,
     required this.checked,
     required this.onTap,
+    required this.amount,
+    required this.onAmount,
   });
   final MedStatus status;
   final DateTime now;
   final bool checked;
   final VoidCallback onTap;
+  final double amount;
+  final ValueChanged<double> onAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +269,70 @@ class _MedRow extends StatelessWidget {
         s.med.name,
         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
       ),
-      subtitle: Text(sub, style: TextStyle(fontSize: 18, color: color)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(sub, style: TextStyle(fontSize: 18, color: color)),
+          if (checked)
+            _AmountPicker(med: s.med, amount: amount, onAmount: onAmount),
+        ],
+      ),
+    );
+  }
+}
+
+/// "- 2 tablets +" under a ticked med, for a dose that isn't the usual one.
+class _AmountPicker extends StatelessWidget {
+  const _AmountPicker({
+    required this.med,
+    required this.amount,
+    required this.onAmount,
+  });
+  final Med med;
+  final double amount;
+  final ValueChanged<double> onAmount;
+
+  @override
+  Widget build(BuildContext context) {
+    final usual = med.usualAmount;
+    final changed = amount != usual;
+    // Half steps only when the usual dose has a half in it.
+    final step = usual == usual.roundToDouble() ? 1.0 : 0.5;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 4,
+        runSpacing: 4,
+        children: [
+          IconButton.filledTonal(
+            tooltip: 'Fewer',
+            onPressed: amount > step ? () => onAmount(amount - step) : null,
+            icon: const Icon(Icons.remove),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              med.doseText(amount),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: changed ? context.status.warning : null,
+              ),
+            ),
+          ),
+          IconButton.filledTonal(
+            tooltip: 'More',
+            onPressed: amount < 20 ? () => onAmount(amount + step) : null,
+            icon: const Icon(Icons.add),
+          ),
+          if (changed)
+            Text(
+              'Usual: ${amountText(usual)}',
+              style: const TextStyle(fontSize: 14),
+            ),
+        ],
+      ),
     );
   }
 }

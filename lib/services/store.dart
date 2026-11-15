@@ -33,8 +33,12 @@ class Store extends ChangeNotifier {
   File get _medsFile => File('${_dir.path}/meds.json');
   File get _logFile => File('${_dir.path}/log.json');
 
-  static Future<Store> open() async {
-    final store = Store._(await getApplicationDocumentsDirectory());
+  static Future<Store> open() async =>
+      openAt(await getApplicationDocumentsDirectory());
+
+  /// Opens the store in [dir]. Tests use a temporary folder.
+  static Future<Store> openAt(Directory dir) async {
+    final store = Store._(dir);
     await store.photosDir.create(recursive: true);
     await store._load();
     return store;
@@ -70,11 +74,13 @@ class Store extends ChangeNotifier {
   // ---- doses ----
 
   /// Saves a dose. [photoPath] is a temporary camera file, copied in here.
+  /// [amounts] holds how many of each med were taken, when not the usual.
   Future<DoseEntry> logDose(
     Set<String> medIds,
     DateTime takenAt,
-    String? photoPath,
-  ) async {
+    String? photoPath, {
+    Map<String, double> amounts = const {},
+  }) async {
     final chosen = _meds.where((m) => medIds.contains(m.id)).toList();
     final id = _uuid.v4();
     String? photoName;
@@ -91,6 +97,9 @@ class Store extends ChangeNotifier {
       takenAt: takenAt,
       medIds: [for (final m in chosen) m.id],
       medNames: [for (final m in chosen) m.name],
+      amounts: [
+        for (final m in chosen) m.doseText(amounts[m.id] ?? m.usualAmount),
+      ],
       photoFile: photoName,
     );
     _log.add(entry);

@@ -231,4 +231,65 @@ void main() {
       isFalse,
     );
   });
+
+  group('your dose differs from the label', () {
+    final rx = Prescription(
+      drug: 'Aspirin',
+      strength: '81 mg',
+      form: 'tablet',
+      directions: const Directions(
+        amount: 4,
+        unit: 'tablet',
+        route: 'mouth',
+        frequency: 'daily1',
+      ),
+      myAmount: 2,
+    );
+    final med = Med(
+      id: 'a',
+      name: rx.medName,
+      schedule: rx.directions.defaultSchedule(),
+      minGapMinutes: 1080,
+      rx: rx,
+    );
+
+    test('label stays as printed, your dose is 2', () {
+      expect(rx.directionsText, 'Take 4 tablets by mouth once a day.');
+      expect(med.usualAmount, 2);
+      expect(rx.amountChanged, isTrue);
+      expect(med.doseText(2), '2 tablets');
+      expect(med.doseText(1), '1 tablet');
+      expect(Prescription.fromJson(rx.toJson()).myAmount, 2);
+    });
+
+    test('meds set up by hand count doses', () {
+      final hand = Med(
+        id: 'h',
+        name: 'H',
+        schedule: const IntervalSchedule(6),
+        minGapMinutes: 300,
+      );
+      expect(hand.usualAmount, 1);
+      expect(hand.doseText(2), '2 doses');
+    });
+
+    test('the log keeps how many were taken', () {
+      final e = DoseEntry(
+        id: '1',
+        takenAt: DateTime(2026, 11, 14, 8),
+        medIds: ['a'],
+        medNames: ['Aspirin 81 mg'],
+        amounts: ['2 tablets'],
+      );
+      expect(e.lines, ['Aspirin 81 mg (2 tablets)']);
+      expect(DoseEntry.fromJson(e.toJson()).lines, e.lines);
+      final old = DoseEntry.fromJson({
+        'id': '0',
+        'takenAt': '2026-11-01T08:00:00.000',
+        'medIds': ['a'],
+        'medNames': ['Aspirin 81 mg'],
+      });
+      expect(old.lines, ['Aspirin 81 mg']);
+    });
+  });
 }

@@ -23,7 +23,7 @@ class HistoryScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete this dose?'),
         content: Text(
-          '${whenText(e.takenAt, DateTime.now())}: ${e.medNames.join(', ')}\n\n'
+          '${whenText(e.takenAt, DateTime.now())}: ${e.lines.join(', ')}\n\n'
           'Only do this if it was logged by mistake. The schedule will be '
           'recalculated without it.',
         ),
@@ -105,7 +105,7 @@ class HistoryScreen extends StatelessWidget {
                       whenText(e.takenAt, now),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    subtitle: Text(e.medNames.join(', ')),
+                    subtitle: Text(e.lines.join(', ')),
                     onTap: photo == null
                         ? null
                         : () => Navigator.of(context).push(

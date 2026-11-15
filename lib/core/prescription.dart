@@ -205,6 +205,12 @@ String amountText(double a) {
   return whole == 0 ? '1/2' : '$whole 1/2';
 }
 
+/// "tablet" or "tablets", for a unit key and amount.
+String unitWordFor(String unit, double amount) {
+  final (one, many) = doseUnits[unit] ?? (unit, unit);
+  return amount <= 1 ? one : many;
+}
+
 /// The directions, as a set of blanks.
 class Directions {
   const Directions({
@@ -255,10 +261,7 @@ class Directions {
     asNeededFor: asNeededFor ?? this.asNeededFor,
   );
 
-  String unitWord() {
-    final (one, many) = doseUnits[unit] ?? (unit, unit);
-    return amount <= 1 ? one : many;
-  }
+  String unitWord() => unitWordFor(unit, amount);
 
   /// "Take 1 tablet by mouth twice a day with food." or
   /// "Take 1 tablet by mouth every 6 hours as needed for pain."
@@ -402,6 +405,7 @@ class Prescription {
     required this.form,
     required this.directions,
     this.details = const LabelDetails(),
+    this.myAmount,
   });
 
   /// Like "Metformin".
@@ -414,6 +418,20 @@ class Prescription {
   final String form;
   final Directions directions;
   final LabelDetails details;
+
+  /// How many you actually take each time, when it differs from the label
+  /// (say the doctor cut it from 4 to 2). Null means as on the label.
+  final double? myAmount;
+
+  /// How many to take each time: [myAmount], or the label's amount.
+  double get usualAmount => myAmount ?? directions.amount;
+
+  /// True when you take a different amount than the label says.
+  bool get amountChanged => myAmount != null && myAmount != directions.amount;
+
+  /// "2 tablets".
+  String doseText(double a) =>
+      '${amountText(a)} ${unitWordFor(directions.unit, a)}';
 
   DoseForm get doseForm => doseFormFor(form);
 
@@ -432,6 +450,7 @@ class Prescription {
     'form': form,
     'directions': directions.toJson(),
     if (!details.isEmpty) 'details': details.toJson(),
+    if (myAmount != null) 'myAmount': myAmount,
   };
 
   factory Prescription.fromJson(Map<String, dynamic> j) => Prescription(
@@ -442,6 +461,7 @@ class Prescription {
     details: j['details'] == null
         ? const LabelDetails()
         : LabelDetails.fromJson(j['details'] as Map<String, dynamic>),
+    myAmount: (j['myAmount'] as num?)?.toDouble(),
   );
 }
 

@@ -54,6 +54,7 @@ class _MedsScreenState extends State<MedsScreen> {
               ),
               subtitle: Text(
                 '${m.rx == null ? '' : '${m.rx!.directionsText}\n'}'
+                '${m.rx?.amountChanged ?? false ? 'You take ${m.rx!.doseText(m.usualAmount)}\n' : ''}'
                 '${m.asNeeded ? 'As needed, no alarms' : scheduleText(m.schedule)}\n'
                 'Minimum gap: ${gapText(m.minGapMinutes)}'
                 '${m.gapConfirmed ? '' : '  (not confirmed)'}',
