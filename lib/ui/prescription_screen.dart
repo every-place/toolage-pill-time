@@ -40,6 +40,9 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   late final TextEditingController _price;
   DateTime? _rxDate;
 
+  /// How many you take, when different from the label. Null: as labeled.
+  double? _myAmount;
+
   Timer? _debounce;
   int _searchSeq = 0;
   bool _searching = false;
@@ -73,6 +76,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       text: d.price == null ? '' : d.price!.toStringAsFixed(2),
     );
     _rxDate = d.rxDate;
+    _myAmount = rx?.myAmount;
     _dir = rx?.directions ?? Directions.forForm(doseFormFor(_form));
     _active = m?.active ?? true;
     _gapTouched = m != null;
@@ -115,6 +119,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     strength: _strength.text.trim(),
     form: _form,
     directions: _dir.copyWith(asNeededFor: _whyNeeded.text.trim()),
+    myAmount: _myAmount == _dir.amount ? null : _myAmount,
     details: LabelDetails(
       rxNumber: _rxNumber.text.trim(),
       rxDate: _rxDate,
@@ -483,6 +488,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
             ),
           const SizedBox(height: 12),
           _LabelPreview(rx: _rx),
+          const SizedBox(height: 16),
+          _YourDose(rx: _rx, onChanged: (a) => setState(() => _myAmount = a)),
           const SizedBox(height: 24),
 
           // 4. Dose times
@@ -577,6 +584,56 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// "I take [- 2 tablets +] each time", for when your dose isn't the label's.
+class _YourDose extends StatelessWidget {
+  const _YourDose({required this.rx, required this.onChanged});
+  final Prescription rx;
+
+  /// Null resets to the label's amount.
+  final ValueChanged<double?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = rx.directions.amount;
+    final mine = rx.usualAmount;
+    final changed = rx.amountChanged;
+    const step = 0.5;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Your dose', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'How many you take each time. Change it if your doctor changed your '
+          'dose. You can also change it when you log a dose.',
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        ValueStepper(
+          label: rx.doseText(mine),
+          onMinus: mine > step ? () => onChanged(mine - step) : null,
+          onPlus: mine < 20 ? () => onChanged(mine + step) : null,
+        ),
+        if (changed)
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'The label says ${rx.doseText(label)}.',
+                  style: TextStyle(fontSize: 16, color: context.status.warning),
+                ),
+              ),
+              TextButton(
+                onPressed: () => onChanged(null),
+                child: const Text('Use the label'),
+              ),
+            ],
+          ),
+      ],
     );
   }
 }

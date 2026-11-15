@@ -111,6 +111,14 @@ class Med {
   /// Taken only when needed: no alarms, but the minimum gap still applies.
   bool get asNeeded => rx?.directions.asNeeded ?? false;
 
+  /// How many you usually take each time. 1 for meds set up by hand.
+  double get usualAmount => rx?.usualAmount ?? 1;
+
+  /// "2 tablets", or "1 dose" for meds set up by hand.
+  String doseText(double amount) =>
+      rx?.doseText(amount) ??
+      '${amountText(amount)} ${amount <= 1 ? 'dose' : 'doses'}';
+
   Med copyWith({
     String? name,
     DoseSchedule? schedule,
@@ -166,6 +174,7 @@ class DoseEntry {
     required this.medNames,
     this.photoFile,
     this.note = '',
+    this.amounts = const [],
   });
 
   final String id;
@@ -174,6 +183,18 @@ class DoseEntry {
 
   /// Names as they were when logged, so history survives renames and deletes.
   final List<String> medNames;
+
+  /// How much of each med was taken, like "2 tablets", in the same order as
+  /// [medNames]. Empty for doses logged before amounts were tracked.
+  final List<String> amounts;
+
+  /// "Aspirin 81 mg (2 tablets)" for each med.
+  List<String> get lines => [
+    for (final (i, name) in medNames.indexed)
+      i < amounts.length && amounts[i].isNotEmpty
+          ? '$name (${amounts[i]})'
+          : name,
+  ];
   final String? photoFile;
   final String note;
 
@@ -184,6 +205,7 @@ class DoseEntry {
     'medNames': medNames,
     'photoFile': photoFile,
     'note': note,
+    if (amounts.isNotEmpty) 'amounts': amounts,
   };
 
   factory DoseEntry.fromJson(Map<String, dynamic> j) => DoseEntry(
@@ -193,5 +215,6 @@ class DoseEntry {
     medNames: [for (final x in j['medNames'] as List) x as String],
     photoFile: j['photoFile'] as String?,
     note: j['note'] as String? ?? '',
+    amounts: [for (final x in j['amounts'] as List? ?? []) x as String],
   );
 }

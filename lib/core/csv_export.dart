@@ -19,7 +19,7 @@ String logToCsv(List<DoseEntry> log) {
       [
         '${t.year}-${_two(t.month)}-${_two(t.day)}',
         '${_two(t.hour)}:${_two(t.minute)}',
-        e.medNames.join('; '),
+        e.lines.join('; '),
         e.photoFile ?? '',
         e.note,
       ].map(_escape).join(','),
